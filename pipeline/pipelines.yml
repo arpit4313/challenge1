@@ -1,0 +1,27 @@
+image: ubuntu:latest
+
+options:
+  docker: true
+
+pipelines:
+  branches:
+    preprod:
+    - step:
+          name: preprod
+          script:
+            - apt-get -y update; apt-get -y install git curl jq python3-pip wget unzip
+            - pip3 install -U awscli
+            - curl -fsSL https://get.docker.com -o get-docker.sh
+            - curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash
+            - tfswitch 0.12.23
+            - ssh-keyscan -t rsa gitlab..com >> ~/.ssh/known_hosts
+            - eval `ssh-agent -s`
+            - git clone git@gitlab.com:arpit4313/challenge3.git -b preprod
+            - ls -la
+            - cd preprod
+            - rm -rf .terraform
+            - terraform init --backend-config="access_key=$AWS_ACCESS_KEY_ID" --backend-config="secret_key=$AWS_SECRET_ACCESS_KEY"
+            - terraform validate -no-color
+            - terraform plan -no-color
+            - terraform apply --auto-approve -no-color
+            - terraform taint module.image.null_resource.push
